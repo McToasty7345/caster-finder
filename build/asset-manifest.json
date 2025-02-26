@@ -1,0 +1,18 @@
+{
+  "files": {
+    "main.css": "/caster-finder/static/css/main.df921013.css",
+    "main.js": "/caster-finder/static/js/main.50218618.js",
+    "static/js/198.e1a33410.chunk.js": "/caster-finder/static/js/198.e1a33410.chunk.js",
+    "static/js/977.e56629ad.chunk.js": "/caster-finder/static/js/977.e56629ad.chunk.js",
+    "static/js/732.9a471428.chunk.js": "/caster-finder/static/js/732.9a471428.chunk.js",
+    "index.html": "/caster-finder/index.html",
+    "main.df921013.css.map": "/caster-finder/static/css/main.df921013.css.map",
+    "main.50218618.js.map": "/caster-finder/static/js/main.50218618.js.map",
+    "198.e1a33410.chunk.js.map": "/caster-finder/static/js/198.e1a33410.chunk.js.map",
+    "732.9a471428.chunk.js.map": "/caster-finder/static/js/732.9a471428.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.df921013.css",
+    "static/js/main.50218618.js"
+  ]
+}
