@@ -1,11 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import fs from 'fs';
 import * as XLSX from 'xlsx';
-import dotenv from 'dotenv';
-import path from 'path';
-
-// Load environment variables
-dotenv.config();
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;

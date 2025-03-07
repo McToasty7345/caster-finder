@@ -1,13 +1,20 @@
 {
   "dependencies": {
+    "@craco/craco": "^7.1.0",
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.49.1",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.0",
+    "path-browserify": "^1.0.1",
+    "react-app-rewired": "^2.2.1",
     "react-router-dom": "^7.2.0",
     "react-scripts": "^5.0.1",
-    "recharts": "^2.15.1"
+    "recharts": "^2.15.1",
+    "stream-browserify": "^3.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss7-compat": "^2.2.17",
@@ -18,11 +25,11 @@
   "homepage": ".",
   "scripts": {
     "prestart": "node codespacesEnv.js",
-    "start": "cross-env REACT_APP_SUPABASE_URL=$REACT_APP_SUPABASE_URL REACT_APP_SUPABASE_ANON_KEY=$REACT_APP_SUPABASE_ANON_KEY react-scripts start",
+    "start": "cross-env REACT_APP_SUPABASE_URL=$REACT_APP_SUPABASE_URL REACT_APP_SUPABASE_ANON_KEY=$REACT_APP_SUPABASE_ANON_KEY craco start",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
-    "build": "cross-env REACT_APP_SUPABASE_URL=$REACT_APP_SUPABASE_URL REACT_APP_SUPABASE_ANON_KEY=$REACT_APP_SUPABASE_ANON_KEY react-scripts build",
-    "test": "react-scripts test",
+    "build": "cross-env REACT_APP_SUPABASE_URL=$REACT_APP_SUPABASE_URL REACT_APP_SUPABASE_ANON_KEY=$REACT_APP_SUPABASE_ANON_KEY craco build",
+    "test": "craco test",
     "eject": "react-scripts eject"
   },
   "browserslist": {

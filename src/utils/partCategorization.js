@@ -1,12 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import fs from 'fs';
 import * as XLSX from 'xlsx';
-import dotenv from 'dotenv';
-import path from 'path';
-import readline from 'readline';
-
-// Load environment variables
-dotenv.config();
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -18,7 +11,18 @@ const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
-
+// Category mappings based on part number prefixes
+const categoryMappings = [
+    { prefix: ['WHL', 'WHEEL'], categoryId: 1, categoryName: 'Wheels' },
+    { prefix: ['RIG', 'SWIVEL', 'CCAPEX', 'CCALPHA', 'CCCREST', 'CCPEAK', 'CCSTOUTHD'], categoryId: 2, categoryName: 'Rigs' },
+    { prefix: ['AXL', 'AXLE', 'HUB'], categoryId: 3, categoryName: 'Axles' },
+    { prefix: ['TPH', 'TOP'], categoryId: 4, categoryName: 'Top Hats' },
+    { prefix: ['BRK', 'BRAKE'], categoryId: 5, categoryName: 'Brakes' },
+    { prefix: ['LOCK', 'SWL'], categoryId: 6, categoryName: 'Swivel Locks' },
+    { prefix: ['THG', 'THREAD'], categoryId: 7, categoryName: 'Thread Guards' },
+    { prefix: ['TOE', 'TOG'], categoryId: 8, categoryName: 'Toe Guards' },
+    { prefix: ['BRG', 'BRUSH'], categoryId: 9, categoryName: 'Brush Guards' }
+  ];
 /**
  * Promisify readline question
  */
@@ -206,6 +210,25 @@ async function categorizeParts() {
     rl.close();
   }
 }
-
+/**
+ * Attempts to categorize a part based on part number patterns
+ */
+export function categorizePartByNumber(partNumber) {
+    const upperPartNumber = partNumber.toUpperCase();
+    
+    for (const mapping of categoryMappings) {
+      for (const prefix of mapping.prefix) {
+        if (upperPartNumber.startsWith(prefix)) {
+          return {
+            categoryId: mapping.categoryId,
+            categoryName: mapping.categoryName
+          };
+        }
+      }
+    }
+    
+    // Default category if no match
+    return { categoryId: null, categoryName: null };
+  }
 // Run the categorization tool
 categorizeParts();
