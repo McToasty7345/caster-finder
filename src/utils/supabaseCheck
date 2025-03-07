@@ -1,0 +1,63 @@
+// src/utils/supabaseCheck.js
+import { supabase } from '../services/supabase';
+
+/**
+ * Tests the Supabase connection by querying the categories table
+ * @returns {Promise<Object>} The result of the connection test
+ */
+export async function testSupabaseConnection() {
+  try {
+    console.log('Testing Supabase connection...');
+    
+    // Try to fetch a single category as a simple test
+    const startTime = performance.now();
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .limit(1);
+    const endTime = performance.now();
+    
+    if (error) {
+      console.error('Supabase connection error:', error);
+      return { 
+        success: false, 
+        error, 
+        usingMock: true,
+        message: `Connection failed: ${error.message}`
+      };
+    }
+    
+    // Check if we're using mock data or real Supabase
+    const usingMock = !process.env.REACT_APP_SUPABASE_URL || 
+                     !process.env.REACT_APP_SUPABASE_ANON_KEY;
+    
+    // Check if the returned data seems valid
+    const responseTime = (endTime - startTime).toFixed(2);
+    const message = usingMock 
+      ? `Using mock data (query time: ${responseTime}ms)`
+      : `Connected to Supabase (query time: ${responseTime}ms)`;
+    
+    console.log('Supabase connection test result:', message);
+    console.log('Sample data:', data);
+    
+    return { 
+      success: true, 
+      usingMock, 
+      data,
+      responseTime,
+      message
+    };
+  } catch (err) {
+    console.error('Unexpected error testing Supabase:', err);
+    return { 
+      success: false, 
+      error: err, 
+      usingMock: true,
+      message: `Unexpected error: ${err.message}`
+    };
+  }
+}
+
+// You can run this manually in your browser console with:
+// import { testSupabaseConnection } from './utils/supabaseCheck';
+// testSupabaseConnection().then(console.log);

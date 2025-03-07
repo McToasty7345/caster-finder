@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePartContext } from '../context/PartContext';
+import { supabase } from '../services/supabase';
+import CategorySpecificFields from '../components/CategorySpecificFields';
 
 const AddPartForm = () => {
   const navigate = useNavigate();
   const { categories, addPart, generatePartNumber } = usePartContext();
   
   const [formData, setFormData] = useState({
+    part_number: '',
     category_id: '',
     name: '',
     description: '',
@@ -19,12 +22,21 @@ const AddPartForm = () => {
     requires_stainless_components: false,
     other_requirements: '',
     competitor_parts: [''],
-    internal_part_number: ''
+    internal_part_number: '',
+    // New array fields
+    compatible_wheels: [''],
+    compatible_rigs: ['']
+  });
+  
+  const [dbConnectionStatus, setDbConnectionStatus] = useState({
+    testing: false,
+    status: 'unknown' // 'unknown', 'success', 'error'
   });
   
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [selectedCategoryName, setSelectedCategoryName] = useState('');
   
   // Materials and types options
   const materialOptions = [
@@ -43,6 +55,37 @@ const AddPartForm = () => {
   
   const bearingOptions = ['Plain Bore', 'Roller', 'Ball Bearing', 'Precision'];
   
+  // Test database connection
+  const testDatabaseConnection = async () => {
+    setDbConnectionStatus({ testing: true, status: 'unknown' });
+    
+    try {
+      // Try to fetch a single category as a simple test
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .limit(1);
+        
+      if (error) throw error;
+      
+      setDbConnectionStatus({ 
+        testing: false, 
+        status: 'success',
+        message: 'Successfully connected to Supabase!'
+      });
+      
+      setTimeout(() => {
+        setDbConnectionStatus(prev => ({ ...prev, status: 'unknown' }));
+      }, 3000);
+    } catch (err) {
+      setDbConnectionStatus({ 
+        testing: false, 
+        status: 'error',
+        message: `Connection error: ${err.message}`
+      });
+    }
+  };
+  
   // Generate part number when certain fields change
   useEffect(() => {
     if (formData.category_id && formData.material && formData.type) {
@@ -58,6 +101,16 @@ const AddPartForm = () => {
       }
     }
   }, [formData.category_id, formData.material, formData.type, formData.size, categories, generatePartNumber]);
+  
+  // Update selected category name when category changes
+  useEffect(() => {
+    if (formData.category_id) {
+      const category = categories.find(c => c.id === parseInt(formData.category_id));
+      setSelectedCategoryName(category?.name || '');
+    } else {
+      setSelectedCategoryName('');
+    }
+  }, [formData.category_id, categories]);
   
   // Handle input changes
   const handleChange = (e) => {
@@ -92,62 +145,120 @@ const AddPartForm = () => {
     setFormData(prev => ({ ...prev, competitor_parts: updatedCompetitorParts }));
   };
   
-  // Form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    
-    try {
-      // Filter out empty competitor parts
-      const filteredCompetitorParts = formData.competitor_parts.filter(part => part.trim() !== '');
-      
-      // Create submission data
-      const submissionData = {
-        ...formData,
-        competitor_parts: filteredCompetitorParts,
-        id: formData.internal_part_number // Use the part number as the ID
-      };
-      
-      // Add part to database
-      const result = await addPart(submissionData);
-      
-      if (result.success) {
-        setSuccess(true);
-        // Reset form after 2 seconds
-        setTimeout(() => {
-          setFormData({
-            category_id: '',
-            name: '',
-            description: '',
-            material: '',
-            size: '',
-            type: '',
-            load_capacity: '',
-            bearing_type: '',
-            requires_zerk_axle: false,
-            requires_stainless_components: false,
-            other_requirements: '',
-            competitor_parts: [''],
-            internal_part_number: ''
-          });
-          setSuccess(false);
-          navigate('/catalog');
-        }, 2000);
-      } else {
-        setError(result.error.message || 'Failed to add part');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
-      console.error(err);
-    } finally {
-      setLoading(false);
+  // Handle array field changes (for compatible parts, etc.)
+  const handleArrayChange = (field, index, value) => {
+    if (value === null) {
+      // Remove item
+      const updatedArray = [...formData[field]];
+      updatedArray.splice(index, 1);
+      setFormData(prev => ({ ...prev, [field]: updatedArray }));
+    } else if (index === -1) {
+      // Add new item
+      setFormData(prev => ({
+        ...prev,
+        [field]: [...prev[field], '']
+      }));
+    } else {
+      // Update existing item
+      const updatedArray = [...formData[field]];
+      updatedArray[index] = value;
+      setFormData(prev => ({ ...prev, [field]: updatedArray }));
     }
   };
+  
+// Form submission
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
+  
+  try {
+    // Filter out empty values from array fields
+    const filteredCompetitorParts = formData.competitor_parts.filter(part => part.trim() !== '');
+    const filteredCompatibleWheels = formData.compatible_wheels.filter(wheel => wheel.trim() !== '');
+    const filteredCompatibleRigs = formData.compatible_rigs.filter(rig => rig.trim() !== '');
+    
+    // Create submission data with explicit part_number as ID
+    const submissionData = {
+      ...formData,
+      competitor_parts: filteredCompetitorParts,
+      compatible_wheels: filteredCompatibleWheels,
+      compatible_rigs: filteredCompatibleRigs
+    };
+    
+    // Explicitly set the ID to be the manufacturer part number
+    submissionData.id = formData.part_number;
+    
+    // Log to verify what's being sent
+    console.log('Submitting part with ID:', submissionData.id);
+    
+    // Add part to database
+    const result = await addPart(submissionData);
+    
+    if (result.success) {
+      setSuccess(true);
+      // Reset form after 2 seconds
+      setTimeout(() => {
+        setFormData({
+          part_number: '',
+          category_id: '',
+          name: '',
+          description: '',
+          material: '',
+          size: '',
+          type: '',
+          load_capacity: '',
+          bearing_type: '',
+          requires_zerk_axle: false,
+          requires_stainless_components: false,
+          other_requirements: '',
+          competitor_parts: [''],
+          internal_part_number: '',
+          compatible_wheels: [''],
+          compatible_rigs: ['']
+        });
+        setSuccess(false);
+        navigate('/catalog');
+      }, 2000);
+    } else {
+      setError(result.error.message || 'Failed to add part');
+    }
+  } catch (err) {
+    setError('An unexpected error occurred');
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
   
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-6">
       <h1 className="text-2xl font-bold mb-6">Add New Part</h1>
+      
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={testDatabaseConnection}
+            disabled={dbConnectionStatus.testing}
+            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:bg-gray-400"
+          >
+            {dbConnectionStatus.testing ? 'Testing Connection...' : 'Test Database Connection'}
+          </button>
+          
+          {dbConnectionStatus.status === 'success' && (
+            <div className="mt-2 p-2 bg-green-100 text-green-700 rounded">
+              {dbConnectionStatus.message}
+            </div>
+          )}
+          
+          {dbConnectionStatus.status === 'error' && (
+            <div className="mt-2 p-2 bg-red-100 text-red-700 rounded">
+              {dbConnectionStatus.message}
+            </div>
+          )}
+        </div>
+      )}
       
       {success && (
         <div className="mb-6 p-4 bg-green-100 text-green-700 rounded">
@@ -162,6 +273,22 @@ const AddPartForm = () => {
       )}
       
       <form onSubmit={handleSubmit}>
+      <div>
+  <label className="block text-sm font-medium mb-2">Manufacturer Part Number*</label>
+  <input
+    type="text"
+    name="part_number"
+    value={formData.part_number}
+    onChange={handleChange}
+    className="w-full p-2 border rounded"
+    required
+    placeholder="e.g. CCAPEX-325-3/8"
+  />
+  <p className="text-xs text-gray-500 mt-1">
+    Enter the manufacturer's actual part number. This will be used as the primary identifier.
+  </p>
+</div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Category */}
           <div>
@@ -239,8 +366,8 @@ const AddPartForm = () => {
             </select>
           </div>
           
-{/* Size */}
-<div>
+          {/* Size */}
+          <div>
             <label className="block text-sm font-medium mb-2">Size</label>
             <input
               type="text"
@@ -264,7 +391,21 @@ const AddPartForm = () => {
               placeholder="e.g. 500 lbs"
             />
           </div>
-          
+          // Add this to your AddPartForm component
+<div className="col-span-2 mt-4">
+  <label className="block text-sm font-medium mb-2">Image URL</label>
+  <input
+    type="text"
+    name="image_url"
+    value={formData.image_url || ''}
+    onChange={handleChange}
+    className="w-full p-2 border rounded"
+    placeholder="https://example.com/images/part-image.jpg"
+  />
+  <p className="text-xs text-gray-500 mt-1">
+    Enter a URL to an image of this part. Recommended image size: 500x500 pixels.
+  </p>
+</div>
           {/* Bearing Type (only for Wheels) */}
           {formData.category_id && 
            categories.find(c => c.id === parseInt(formData.category_id))?.name === 'Wheels' && (
@@ -300,8 +441,9 @@ const AddPartForm = () => {
             </p>
           </div>
         </div>
-               {/* Description */}
-               <div className="col-span-2 mt-4">
+        
+        {/* Description */}
+        <div className="col-span-2 mt-4">
           <label className="block text-sm font-medium mb-2">Description</label>
           <textarea
             name="description"
@@ -311,6 +453,19 @@ const AddPartForm = () => {
             placeholder="Enter part description"
           ></textarea>
         </div>
+        
+        {/* Category-specific fields */}
+        {selectedCategoryName && (
+          <div className="col-span-2 mt-6">
+            <h3 className="text-lg font-semibold mb-4">{selectedCategoryName} Specific Details</h3>
+            <CategorySpecificFields 
+              categoryName={selectedCategoryName}
+              formData={formData}
+              handleChange={handleChange}
+              handleArrayChange={handleArrayChange}
+            />
+          </div>
+        )}
         
         {/* Special Requirements */}
         <div className="col-span-2 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">

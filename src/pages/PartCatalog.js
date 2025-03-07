@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePartContext } from '../context/PartContext';
 import { useCompatibilityContext } from '../context/CompatibilityContext';
+import PartDetail from '../components/PartDetail';
 
 const PartCatalog = () => {
   const { category: categoryId } = useParams();
@@ -22,6 +23,19 @@ const PartCatalog = () => {
     materials: [],
     sizes: [],
     types: []
+  });
+
+  // Part detail modal state
+  const [selectedPartForDetail, setSelectedPartForDetail] = useState(null);
+
+  // Advanced search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFields, setSearchFields] = useState({
+    name: true,
+    description: true,
+    material: true,
+    partNumber: true,
+    competitorParts: true
   });
   
   // Load category and parts on initial render or when categoryId changes
@@ -64,6 +78,9 @@ const PartCatalog = () => {
       type: '',
       competitorPart: ''
     });
+    
+    // Reset search
+    setSearchQuery('');
   };
   
   // Handle category change
@@ -83,12 +100,21 @@ const PartCatalog = () => {
       [filterType]: value
     }));
   };
+
+  // Handle search field toggles
+  const handleSearchFieldToggle = (field) => {
+    setSearchFields(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
   
-  // Apply filters
+  // Apply filters and search
   useEffect(() => {
     if (selectedCategory && parts[selectedCategory.id]) {
       let results = [...parts[selectedCategory.id]];
       
+      // First apply regular filters
       if (filters.material) {
         results = results.filter(part => part.material === filters.material);
       }
@@ -110,9 +136,28 @@ const PartCatalog = () => {
         );
       }
       
+      // Then apply search query if it exists
+      if (searchQuery.trim() !== '') {
+        results = results.filter(part => {
+          const searchTerms = searchQuery.toLowerCase().split(' ');
+          
+          return searchTerms.every(term => {
+            return (
+              (searchFields.name && part.name && part.name.toLowerCase().includes(term)) ||
+              (searchFields.description && part.description && part.description.toLowerCase().includes(term)) ||
+              (searchFields.material && part.material && part.material.toLowerCase().includes(term)) ||
+              (searchFields.partNumber && part.internal_part_number && part.internal_part_number.toLowerCase().includes(term)) ||
+              (searchFields.competitorParts && 
+               part.competitor_parts && 
+               part.competitor_parts.some(cp => cp.toLowerCase().includes(term)))
+            );
+          });
+        });
+      }
+      
       setFilteredParts(results);
     }
-  }, [filters, selectedCategory, parts]);
+  }, [searchQuery, searchFields, filters, selectedCategory, parts]);
   
   // Handle part selection
   const handlePartSelection = (part) => {
@@ -129,6 +174,66 @@ const PartCatalog = () => {
       category_name: selectedCategory?.name
     };
     addToBom(partWithCategory);
+  };
+
+  // Open part detail view
+  const openPartDetail = (part) => {
+    setSelectedPartForDetail(part);
+  };
+
+  // Close part detail view
+  const closePartDetail = () => {
+    setSelectedPartForDetail(null);
+  };
+
+  // Define dynamic columns based on category
+  const getCategorySpecificColumns = () => {
+    if (!selectedCategory) return [];
+    
+    const categoryName = selectedCategory.name;
+    let specificColumns = [];
+    
+    switch (categoryName) {
+      case 'Top Hats':
+        specificColumns = [
+          { header: 'Inner Diameter', key: 'inner_diameter' },
+          { header: 'Outer Diameter', key: 'outer_diameter' },
+          { header: 'Wheel Type', key: 'wheel_type' },
+          { header: 'Axle Size', key: 'axle_size' }
+        ];
+        break;
+      case 'Axles':
+        specificColumns = [
+          { header: 'Length', key: 'length' },
+          { header: 'Thread', key: 'thread_type' },
+          { header: 'CIN', key: 'cin' }
+        ];
+        break;
+      case 'Rigs':
+        specificColumns = [
+          { header: 'Vendor', key: 'vendor' },
+          { header: 'Bolt Pattern', key: 'bolt_pattern' },
+          { header: 'OAH', key: 'oah' }
+        ];
+        break;
+      case 'Wheels':
+        specificColumns = [
+          { header: 'Tread', key: 'tread_material' },
+          { header: 'Core', key: 'core_material' },
+          { header: 'Durometer', key: 'durometer' }
+        ];
+        break;
+      case 'Brakes':
+      case 'Swivel Locks':
+        specificColumns = [
+          { header: 'Vendor', key: 'vendor' }
+        ];
+        break;
+      default:
+        break;
+    }
+    
+    return specificColumns;
   };
   
   return (
@@ -232,6 +337,75 @@ const PartCatalog = () => {
           </div>
         </div>
         
+        {/* Advanced Search */}
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+          <h3 className="font-medium mb-3">Advanced Search</h3>
+          
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                className="w-full p-2 border rounded"
+                placeholder="Search parts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex flex-wrap gap-3">
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  className="form-checkbox h-4 w-4 text-blue-600"
+                  checked={searchFields.name}
+                  onChange={() => handleSearchFieldToggle('name')}
+                />
+                <span className="ml-2 text-sm">Name</span>
+              </label>
+              
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  className="form-checkbox h-4 w-4 text-blue-600"
+                  checked={searchFields.description}
+                  onChange={() => handleSearchFieldToggle('description')}
+                />
+                <span className="ml-2 text-sm">Description</span>
+              </label>
+              
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  className="form-checkbox h-4 w-4 text-blue-600"
+                  checked={searchFields.material}
+                  onChange={() => handleSearchFieldToggle('material')}
+                />
+                <span className="ml-2 text-sm">Material</span>
+              </label>
+              
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  className="form-checkbox h-4 w-4 text-blue-600"
+                  checked={searchFields.partNumber}
+                  onChange={() => handleSearchFieldToggle('partNumber')}
+                />
+                <span className="ml-2 text-sm">Part #</span>
+              </label>
+              
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  className="form-checkbox h-4 w-4 text-blue-600"
+                  checked={searchFields.competitorParts}
+                  onChange={() => handleSearchFieldToggle('competitorParts')}
+                />
+                <span className="ml-2 text-sm">Competitor Parts</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
         {/* Results */}
         {loading ? (
           <div className="text-center py-8">
@@ -243,9 +417,9 @@ const PartCatalog = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Part Number
-                    </th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+  Part Number
+</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Name
                     </th>
@@ -258,6 +432,14 @@ const PartCatalog = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Size
                     </th>
+                    
+                    {/* Dynamic category-specific columns */}
+                    {getCategorySpecificColumns().map(column => (
+                      <th key={column.key} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {column.header}
+                      </th>
+                    ))}
+                    
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Comp. Part #
                     </th>
@@ -269,9 +451,9 @@ const PartCatalog = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredParts.map((part) => (
                     <tr key={part.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {part.internal_part_number || part.id}
-                      </td>
+<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+  {part.part_number || part.internal_part_number || part.id}
+</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {part.name}
                       </td>
@@ -284,6 +466,14 @@ const PartCatalog = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {part.size || '-'}
                       </td>
+                      
+                      {/* Dynamic category-specific columns */}
+                      {getCategorySpecificColumns().map(column => (
+                        <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {part[column.key] || '-'}
+                        </td>
+                      ))}
+                      
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {part.competitor_parts && part.competitor_parts.length > 0
                           ? part.competitor_parts.join(', ')
@@ -302,6 +492,12 @@ const PartCatalog = () => {
                             className="text-green-600 hover:text-green-900"
                           >
                             + BOM
+                          </button>
+                          <button
+                            onClick={() => openPartDetail(part)}
+                            className="text-purple-600 hover:text-purple-900"
+                          >
+                            Details
                           </button>
                         </div>
                       </td>
@@ -322,6 +518,15 @@ const PartCatalog = () => {
           Showing {filteredParts.length} {filteredParts.length === 1 ? 'part' : 'parts'}
         </div>
       </div>
+      
+      {/* Part Detail Modal */}
+      {selectedPartForDetail && (
+        <PartDetail 
+          part={selectedPartForDetail}
+          category={selectedCategory?.name}
+          onClose={closePartDetail}
+        />
+      )}
     </div>
   );
 };

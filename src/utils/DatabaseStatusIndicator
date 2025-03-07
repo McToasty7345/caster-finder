@@ -1,0 +1,137 @@
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../services/supabase';
+
+const DatabaseStatusIndicator = () => {
+  const [status, setStatus] = useState('checking');
+  const [details, setDetails] = useState(null);
+  
+  useEffect(() => {
+    checkDatabaseConnection();
+  }, []);
+  
+  const checkDatabaseConnection = async () => {
+    try {
+      setStatus('checking');
+      
+      // Test basic connection
+      const startTime = Date.now();
+      const { data, error } = await supabase.from('categories').select('count').limit(1);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Calculate response time
+      const responseTime = Date.now() - startTime;
+      
+      // Get table counts
+      const counts = await getTableCounts();
+      
+      setStatus('connected');
+      setDetails({
+        responseTime,
+        ...counts
+      });
+    } catch (error) {
+      console.error('Database connection error:', error);
+      setStatus('error');
+      setDetails({
+        errorMessage: error.message || 'Connection failed'
+      });
+    }
+  };
+  
+  const getTableCounts = async () => {
+    try {
+      // Get counts from main tables
+      const [
+        { count: categoriesCount },
+        { count: partsCount },
+        { count: rulesCount }
+      ] = await Promise.all([
+        supabase.from('categories').select('*', { count: 'exact', head: true }),
+        supabase.from('parts').select('*', { count: 'exact', head: true }),
+        supabase.from('compatibility_rules').select('*', { count: 'exact', head: true })
+      ]);
+      
+      return {
+        categoriesCount,
+        partsCount,
+        rulesCount
+      };
+    } catch (error) {
+      console.error('Error getting table counts:', error);
+      return {
+        error: error.message
+      };
+    }
+  };
+  
+  // Status styling
+  const getStatusStyles = () => {
+    switch (status) {
+      case 'connected':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'error':
+        return 'bg-red-100 text-red-800 border-red-300';
+      default:
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+    }
+  };
+  
+  return (
+    <div className={`rounded-md border p-4 ${getStatusStyles()}`}>
+      <div className="flex items-center">
+        <div className="mr-3">
+          {status === 'checking' && (
+            <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          )}
+          
+          {status === 'connected' && (
+            <svg className="h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+          )}
+          
+          {status === 'error' && (
+            <svg className="h-5 w-5 text-red-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+          )}
+        </div>
+        
+        <div>
+          <h3 className="text-sm font-medium">
+            Database Status: {status === 'checking' ? 'Checking connection...' : 
+                            status === 'connected' ? 'Connected' : 'Connection Error'}
+          </h3>
+          
+          {status === 'connected' && details && (
+            <div className="mt-1 text-sm">
+              <p>Response time: {details.responseTime}ms</p>
+              <p>Tables: Categories ({details.categoriesCount}), Parts ({details.partsCount}), Rules ({details.rulesCount})</p>
+            </div>
+          )}
+          
+          {status === 'error' && details && (
+            <p className="mt-1 text-sm">{details.errorMessage}</p>
+          )}
+        </div>
+      </div>
+      
+      <div className="mt-3">
+        <button
+          onClick={checkDatabaseConnection}
+          className="text-sm px-3 py-1 bg-white border rounded shadow-sm hover:bg-gray-50"
+        >
+          {status === 'checking' ? 'Checking...' : 'Re-check Connection'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default DatabaseStatusIndicator;

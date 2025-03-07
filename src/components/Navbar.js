@@ -11,6 +11,10 @@ const Navbar = () => {
     return location.pathname === path ? 'bg-blue-700' : '';
   };
   
+  const isAdminActive = () => {
+    return location.pathname.startsWith('/admin') ? 'bg-blue-700' : '';
+  };
+  
   return (
     <nav className="bg-blue-600 text-white shadow-lg">
       <div className="max-w-6xl mx-auto px-4">
@@ -36,6 +40,9 @@ const Navbar = () => {
               </Link>
               <Link to="/add-part" className={`py-5 px-3 hover:bg-blue-700 ${isActive('/add-part')}`}>
                 Add Part
+              </Link>
+              <Link to="/admin" className={`py-5 px-3 hover:bg-blue-700 ${isAdminActive()}`}>
+                Admin
               </Link>
             </div>
           </div>
@@ -64,6 +71,9 @@ const Navbar = () => {
         </Link>
         <Link to="/add-part" className={`block py-2 px-4 text-sm hover:bg-blue-700 ${isActive('/add-part')}`}>
           Add Part
+        </Link>
+        <Link to="/admin" className={`block py-2 px-4 text-sm hover:bg-blue-700 ${isAdminActive()}`}>
+          Admin
         </Link>
       </div>
     </nav>

@@ -1,31 +1,27 @@
 {
-  "name": "caster-finder",
-  "version": "0.1.0",
-  "private": true,
   "dependencies": {
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.49.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "react-router-dom": "^7.2.0",
-    "react-scripts": "5.0.1",
+    "react-scripts": "^5.0.1",
     "recharts": "^2.15.1"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.16",
-    "gh-pages": "^6.3.0",
-    "postcss": "^8.4.33",
-    "tailwindcss": "^3.4.1"
+    "@tailwindcss/postcss7-compat": "^2.2.17",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.7",
+    "gh-pages": "^6.3.0"
   },
-  "homepage": "https://mctoasty7345.github.io/caster-finder",
+  "homepage": ".",
   "scripts": {
+    "prestart": "node codespacesEnv.js",
+    "start": "cross-env REACT_APP_SUPABASE_URL=$REACT_APP_SUPABASE_URL REACT_APP_SUPABASE_ANON_KEY=$REACT_APP_SUPABASE_ANON_KEY react-scripts start",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "cross-env REACT_APP_SUPABASE_URL=$REACT_APP_SUPABASE_URL REACT_APP_SUPABASE_ANON_KEY=$REACT_APP_SUPABASE_ANON_KEY react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
